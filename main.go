@@ -3,14 +3,15 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"text/template"
 )
 
 // Simple programm to query the github API and search all repositories
-//
 
 const SEARCH_URL = "https://api.github.com/search/repositories"
 
@@ -62,6 +63,13 @@ func RunQuery(searchTerm string) (*Response, error) {
 	return &result, nil
 }
 
+const ResultTemplate = `{{range .Items}}==========================================================
+Name: {{.Name}}
+Stars: {{.Stars}}
+URL: {{.Url}}
+{{end}}
+`
+
 func main() {
 	if len(os.Args) == 1 {
 		fmt.Println("Please provide a search term")
@@ -78,7 +86,14 @@ func main() {
 	}
 
 	fmt.Printf("Search result: Found %d repositories\n", resp.TotalCount)
-	for _, item := range resp.Items {
-		fmt.Printf("%s \n[%d] %s  \n\n", item.Name, item.Stars, item.Url)
+
+	out, err := template.New("response").Parse(ResultTemplate)
+
+	if err != nil {
+		log.Fatal("Failed to create template")
+	}
+
+	if err := out.Execute(os.Stdout, resp); err != nil {
+		log.Fatal("Faild to write to screen", err)
 	}
 }
